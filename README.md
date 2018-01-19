@@ -12,3 +12,6 @@ takes allcrawspreproc.txt and performs the respective analysis
 - Dictionary conversion + saving (not correct yet)
 
 result: all kinds of .mat and .txt files (contained by titlesASCII_all.zip and titlesASCII_split_and_citations.zip)
+
+### copyright:
+the function /scripts/Pi/scholarcrawler.py was adapted from ckreibich (https://github.com/ckreibich/scholar.py)
