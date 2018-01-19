@@ -14,4 +14,10 @@ takes allcrawspreproc.txt and performs the respective analysis
 result: all kinds of .mat and .txt files (contained by titlesASCII_all.zip and titlesASCII_split_and_citations.zip)
 
 ### copyright:
-the function /scriptsPi/scholarcrawler.py was adapted from ckreibich (https://github.com/ckreibich/scholar.py)
+-------
+the function /scriptsPi/scholarcrawler.py was adapted from ckreibich (https://github.com/ckreibich/scholar.py) according to the standard [BSD license](http://opensource.org/licenses/BSD-2-Clause)
+
+### License:
+-------
+
+all content within this repository are using the standard [BSD license](http://opensource.org/licenses/BSD-2-Clause).
