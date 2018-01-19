@@ -120,7 +120,7 @@ load('citations_norm')
 max_spec_char=10;
 min_occurance_per_word_in_dict=3;
 
-dictionary_titles_raw=char(new_titles_as_ASCII);
+dictionary_titles_raw=lower(char(new_titles_as_ASCII));
 
 listofallowedspecialcharacters={'"','''','!','.',',',':',';','-','–','?','_','+','%','&','(',')','[',']','$','€','£','/','§','=','#','*','°','α','β','γ','…'};
 
