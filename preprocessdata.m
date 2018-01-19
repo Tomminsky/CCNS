@@ -118,7 +118,7 @@ load('citations_norm')
 %
 
 max_spec_char=10;
-min_occurance_per_word_in_dict=3;
+min_occurance_per_word_in_dict=10;
 
 dictionary_titles_raw=lower(char(new_titles_as_ASCII));
 
@@ -197,7 +197,8 @@ remaining_validcitationsnorm=validcitationsnorm(idx_validtitles_remaining,:);
 %%% exclude weird stuff from dictionary %%%
 listofallowedspecialcharacters=listofallowedspecialcharacters([listofallowedspecialcharacters{:}]~='…');
 
-[dictionary,~,c]=unique([strsplit(dictionary_titles_SC(:)'),listofallowedspecialcharacters(:)']);
+all_words=arrayfun(@(x) strsplit(dictionary_titles_SC(x,:)),1:size(dictionary_titles_SC,1),'unif',0);
+[dictionary,~,c]=unique([all_words{:},listofallowedspecialcharacters(:)']);
 occurance = hist(c,length(dictionary));
 
 % include: valid variable names, defined special characters, strings that
@@ -210,7 +211,7 @@ idx_valid_entry=(cellfun(@isvarname,dictionary_new) | ...
     ismember(dictionary_new,listofallowedspecialcharacters) | ...
     arrayfun(@(x) ~isnan(str2double(dictionary_new{x}(1))),1:size(dictionary_new,2)) ...
     ) & ...
-    occurance_new>min_occurance_per_word_in_dict;
+    occurance_new>=min_occurance_per_word_in_dict;
 
 dictionaryunique=dictionary_new(idx_valid_entry);
 
@@ -226,6 +227,8 @@ m=0;
 
 dictionaryuniquethresh=dictionaryunique;
 
+
+%%% actual word index coding
 for n=1:numeltitles
     tic
     wordidx=arrayfun(@(x) find(strcmp(dictionary_titles{n}{x},dictionaryuniquethresh)),1:size(dictionary_titles{n},2),'unif',0);
