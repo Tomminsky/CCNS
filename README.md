@@ -20,4 +20,4 @@ the function /scriptsPi/scholarcrawler.py was adapted from ckreibich (https://gi
 ### License:
 -------
 
-all content within this repository are using the standard [BSD license](http://opensource.org/licenses/BSD-2-Clause).
+all contents within this repository are using the standard [BSD license](http://opensource.org/licenses/BSD-2-Clause).
