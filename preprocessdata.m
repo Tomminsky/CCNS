@@ -275,3 +275,121 @@ save('citationsnormDict','remaining_validcitationsnorm')
 citationsnormDict=remaining_validcitationsnorm;
 citationsnormDict=array2table(citationsnormDict);
 writetable(citationsnormDict)
+
+%% again for ASCII represented titles for making ASCII for same titles as Dict
+new_ASCII=table2array(titlesDict);
+
+whitespace=find(strcmp(dictionaryuniquethresh,{' '}));
+new_ASCII(new_ASCII==0)=whitespace;
+
+max_size_title=size(new_ASCII,2);
+
+
+m=0;
+numeltitles=size(new_ASCII,1);
+for title_=1:numeltitles
+tic
+[last_word,s]=bwlabel(new_ASCII(title_,1:max_size_title)==whitespace);
+idx=find(last_word==s);
+idx=idx(1)-1;
+
+space_requirement_vec=1:2:2*idx-1;
+
+title_curr=new_ASCII(title_,1:idx);
+
+curr_space_requirement_vec=1:idx;
+
+title_curr_spaced=[zeros(size(space_requirement_vec)),zeros(size(curr_space_requirement_vec))]+whitespace;
+title_curr_spaced(space_requirement_vec)=new_ASCII(title_,curr_space_requirement_vec);
+
+new_ASCII(title_,1:size(title_curr_spaced,2))=title_curr_spaced;
+title_ASCII=double([dictionaryuniquethresh{new_ASCII(title_,:)}]);
+new_ASCII(title_,:)=title_ASCII(1:max_size_title);
+m=m+1;
+    currtime=toc;
+    timeleft(m)=currtime*numeltitles-currtime*title_;
+    if rem(title_,1000)==1
+        m=0;
+        disp(['progress :' num2str(title_/numeltitles*100) '% - time left: ' num2str(nanmean(timeleft)/60) 'm'])
+    end
+end
+
+validcitations=remaining_validcitations;
+new_titles_as_ASCII=new_ASCII;
+
+low_25_percent = max(prctile(validcitations,[0 25]));
+high_25_percent = min(prctile(validcitations,[75 100]));
+
+idxlow=validcitations<=low_25_percent;
+idxhigh=validcitations>=high_25_percent;
+
+low_25_percentsel_cit=validcitations(idxlow);
+high_25_percentsel_cit=validcitations(idxhigh);
+
+low_25_percentsel_citnorm=validcitationsnorm(idxlow);
+high_25_percentsel_citnorm=validcitationsnorm(idxhigh);
+
+low_25_percentsel_titles=new_titles_as_ASCII(idxlow,:);
+high_25_percentsel_titles=new_titles_as_ASCII(idxhigh,:);
+
+mergedvaltitleesel=[[low_25_percentsel_titles;high_25_percentsel_titles],[zeros(size(low_25_percentsel_titles(:,1)));ones(size(high_25_percentsel_titles(:,1)))]];
+
+mergedvalcitesel=[[low_25_percentsel_cit;high_25_percentsel_cit],[zeros(size(low_25_percentsel_cit(:,1)));ones(size(high_25_percentsel_cit(:,1)))]];
+
+mergedvalcitenormsel=[[low_25_percentsel_citnorm;high_25_percentsel_citnorm],[zeros(size(low_25_percentsel_citnorm(:,1)));ones(size(high_25_percentsel_citnorm(:,1)))]];
+
+% save data
+disp('saving...')
+save('titlesASCII_DictComp','new_titles_as_ASCII')
+titlesASCII=new_titles_as_ASCII;
+titlesASCII_DictComp=array2table(titlesASCII);
+writetable(titlesASCII_DictComp)
+save('titlesASCII_low_DictComp','low_25_percentsel_titles')
+titlesASCII_low=low_25_percentsel_titles;
+titlesASCII_low_DictComp=array2table(titlesASCII_low);
+writetable(titlesASCII_low_DictComp)
+save('titlesASCII_high_DictComp','high_25_percentsel_titles')
+titlesASCII_high=high_25_percentsel_titles;
+titlesASCII_high_DictComp=array2table(titlesASCII_high);
+writetable(titlesASCII_high_DictComp)
+save('titlesASCII_high_low_merged_DictComp','mergedvaltitleesel')
+titlesASCII_high_low_merged=mergedvaltitleesel;
+titlesASCII_high_low_merged_DictComp=array2table(titlesASCII_high_low_merged);
+writetable(titlesASCII_high_low_merged_DictComp)
+
+
+save('citations_raw_DictComp','validcitations')
+citations_raw=validcitations;
+citations_raw_DictComp=array2table(citations_raw);
+writetable(citations_raw_DictComp)
+save('citations_raw_low_DictComp','low_25_percentsel_cit')
+citations_raw_low=low_25_percentsel_cit;
+citations_raw_low_DictComp=array2table(citations_raw_low);
+writetable(citations_raw_low_DictComp)
+save('citations_raw_high_DictComp','high_25_percentsel_cit')
+citations_raw_high=high_25_percentsel_cit;
+citations_raw_high_DictComp=array2table(citations_raw_high);
+writetable(citations_raw_high_DictComp)
+save('citations_raw_high_low_merged_DictComp','mergedvalcitesel')
+citations_raw_high_low_merged=mergedvalcitesel;
+citations_raw_high_low_merged_DictComp=array2table(citations_raw_high_low_merged);
+writetable(citations_raw_high_low_merged_DictComp)
+
+save('citations_norm_DictComp','validcitationsnorm')
+citations_norm=validcitationsnorm;
+citations_norm_DictComp=array2table(citations_norm);
+writetable(citations_norm_DictComp)
+save('citations_norm_low_DictComp','low_25_percentsel_citnorm')
+citations_norm_low=low_25_percentsel_citnorm;
+citations_norm_low_DictComp=array2table(citations_norm_low);
+writetable(citations_norm_low_DictComp)
+save('citations_norm_high_DictComp','high_25_percentsel_citnorm')
+citations_norm_high=high_25_percentsel_citnorm;
+citations_norm_high_DictComp=array2table(citations_norm_high);
+writetable(citations_norm_high_DictComp)
+save('citations_norm_high_low_merged_DictComp','mergedvalcitenormsel')
+citations_norm_high_low_merged=mergedvalcitenormsel;
+citations_norm_high_low_merged_DictComp=array2table(citations_norm_high_low_merged);
+writetable(citations_norm_high_low_merged_DictComp)
+
+disp('done.')
