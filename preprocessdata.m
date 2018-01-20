@@ -117,12 +117,12 @@ load('citations_raw')
 load('citations_norm')
 %
 
-max_spec_char=10;
-min_occurance_per_word_in_dict=10;
+max_spec_char=20;
+min_occurance_per_word_in_dict=5;
 
 dictionary_titles_raw=lower(char(new_titles_as_ASCII));
 
-listofallowedspecialcharacters={'"','''','!','.',',',':',';','-','–','?','_','+','%','&','(',')','[',']','$','€','£','/','§','=','#','*','°','α','β','γ','…'};
+listofallowedspecialcharacters=[cellstr(char([33:47,58:64,91:96,123:129])')',{'§','°','α','β','γ','–','…'}];
 
 dictionary_titles_raw_SC=[char(zeros(size(dictionary_titles_raw,1),1)+32),...
     dictionary_titles_raw,...
@@ -178,6 +178,7 @@ for n=1:size(listofallowedspecialcharacters,2)
     
 end
 dictionary_titles_raw_SC(dictionary_titles_raw_SC==0)=32;
+disp('example:')
 dictionary_titles_raw_SC(200,:)
 
 %%% exclude all having too many special characters
@@ -217,7 +218,7 @@ dictionaryunique=dictionary_new(idx_valid_entry);
 
 %
 titles_as_dictionaryindices=nan(size(new_titles_as_ASCII));
-dictionary_titles=cellfun(@strsplit,cellstr(dictionary_titles_SC),'un',0);
+dictionary_titles=cellfun(@strsplit,cellstr(dictionary_titles_SC(:,2:end)),'un',0);
 numeltitles=numel(dictionary_titles);
 
 progress=1/numeltitles;
@@ -225,10 +226,12 @@ timeleft=nan(100,1);
 actualidx=1:numel(dictionaryunique);
 m=0;
 
-dictionaryuniquethresh=dictionaryunique;
+dictionaryuniquethresh=sort(dictionaryunique);
 
 
 %%% actual word index coding
+idx_contains_not_in_dict_words=zeros(size(dictionary_titles,1),1);
+
 for n=1:numeltitles
     tic
     wordidx=arrayfun(@(x) find(strcmp(dictionary_titles{n}{x},dictionaryuniquethresh)),1:size(dictionary_titles{n},2),'unif',0);
@@ -236,9 +239,10 @@ for n=1:numeltitles
     sizewordidx=size(wordidx,2);
     titles_as_dictionaryindices(n,1:sizewordidx)=wordidx;
     titles_as_dictionaryindices(n,sizewordidx+1:end)=zeros;
-    currtime=toc;
     
+    idx_contains_not_in_dict_words(n)=sum(ismember(dictionary_titles{n},dictionaryuniquethresh)==0)>0;
     m=m+1;
+    currtime=toc;
     timeleft(m)=currtime*numeltitles-currtime*n;
     if rem(n,100)==1
         m=0;
@@ -247,7 +251,6 @@ for n=1:numeltitles
 end
 
 % check if title contains words that are not in dictionary
-idx_contains_not_in_dict_words=arrayfun(@(x) sum(ismember(dictionary_titles{x},dictionaryuniquethresh)==0)>0,1:size(dictionary_titles,1));
 
 titles_as_dictionaryindices=titles_as_dictionaryindices(~idx_contains_not_in_dict_words,:);
 remaining_validcitations=remaining_validcitations(~idx_contains_not_in_dict_words,:);
