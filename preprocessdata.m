@@ -1,9 +1,14 @@
 %%% data preprocessing %%%
 
+cd('/Users/Tommy/Documents/Nijmegen/Study/CCNS/final_project/')
+
+unix('sh preprocessdata.sh')
+pause(30)
+
 clc
 clear
 fileID=fopen('/Users/Tommy/Documents/Nijmegen/Study/CCNS/final_project/allcrawspreproc.txt');
-cd('/Users/Tommy/Documents/Nijmegen/Study/CCNS/final_project/')
+
 data=textscan(fileID,'%s','Delimiter','\n');
 fclose(fileID);
 
@@ -109,7 +114,7 @@ citations_norm_high_low_merged=mergedvalcitenormsel;
 citations_norm_high_low_merged=array2table(citations_norm_high_low_merged);
 writetable(citations_norm_high_low_merged)
 
-%% for dictionary represented titles
+%%% for dictionary represented titles
 clc
 clear
 load('titlesASCII')
@@ -276,14 +281,13 @@ citationsnormDict=remaining_validcitationsnorm;
 citationsnormDict=array2table(citationsnormDict);
 writetable(citationsnormDict)
 
-%% again for ASCII represented titles for making ASCII for same titles as Dict
+%%% again for ASCII represented titles for making ASCII for same titles as Dict
 new_ASCII=table2array(titlesDict);
 
 whitespace=find(strcmp(dictionaryuniquethresh,{' '}));
 new_ASCII(new_ASCII==0)=whitespace;
 
 max_size_title=size(new_ASCII,2);
-
 
 m=0;
 numeltitles=size(new_ASCII,1);
