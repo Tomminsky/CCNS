@@ -9,7 +9,8 @@ result: allcrawspreproc.txt
 takes allcrawspreproc.txt and performs the respective analysis
 
 - ASCII conversion + saving
-- Dictionary conversion + saving (not correct yet)
+- Dictionary conversion + saving
+- ASCII re-conversion based on titles used to build up the dictionary version + saving
 
 result: all kinds of .mat and .txt files (contained by titlesASCII_all.zip and titlesASCII_split_and_citations.zip)
 
