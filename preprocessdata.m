@@ -279,9 +279,9 @@ citationsnormDict=remaining_validcitationsnorm;
 citationsnormDict=array2table(citationsnormDict);
 writetable(citationsnormDict)
 
-%%% again for ASCII represented titles for making ASCII for same titles as Dict
+%% again for ASCII represented titles for making ASCII for same titles as Dict
 new_ASCII=table2array(titlesDict);
-
+dictionaryuniquethresh=[dictionaryuniquethresh,{' '}];
 whitespace=find(strcmp(dictionaryuniquethresh,{' '}));
 new_ASCII(new_ASCII==0)=whitespace;
 
@@ -317,6 +317,7 @@ m=m+1;
 end
 
 validcitations=remaining_validcitations;
+validcitationsnorm=remaining_validcitationsnorm;
 new_titles_as_ASCII=new_ASCII;
 
 low_25_percent = max(prctile(validcitations,[0 25]));
