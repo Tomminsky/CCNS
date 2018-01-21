@@ -1,13 +1,11 @@
 %%% data preprocessing %%%
-
+time_whole_script=tic;
 cd('/Users/Tommy/Documents/Nijmegen/Study/CCNS/final_project/')
 
-unix('sh preprocessdata.sh')
-pause(30)
-
+unix('sh preprocessdata.sh');
 clc
-clear
-fileID=fopen('/Users/Tommy/Documents/Nijmegen/Study/CCNS/final_project/allcrawspreproc.txt');
+clearvars -except time_whole_script
+fileID=fopen('/Users/Tommy/Documents/Nijmegen/Study/CCNS/final_project/allcrawlspreproc.txt');
 
 data=textscan(fileID,'%s','Delimiter','\n');
 fclose(fileID);
@@ -116,7 +114,7 @@ writetable(citations_norm_high_low_merged)
 
 %%% for dictionary represented titles
 clc
-clear
+clearvars -except time_whole_script
 load('titlesASCII')
 load('citations_raw')
 load('citations_norm')
@@ -397,3 +395,4 @@ citations_norm_high_low_merged_DictComp=array2table(citations_norm_high_low_merg
 writetable(citations_norm_high_low_merged_DictComp)
 
 disp('done.')
+time_whole_script=toc(time_whole_script)
