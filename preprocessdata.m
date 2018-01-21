@@ -259,6 +259,34 @@ titles_as_dictionaryindices=titles_as_dictionaryindices(~idx_contains_not_in_dic
 remaining_validcitations=remaining_validcitations(~idx_contains_not_in_dict_words,:);
 remaining_validcitationsnorm=remaining_validcitationsnorm(~idx_contains_not_in_dict_words,:);
 
+
+validcitations=remaining_validcitations;
+validcitationsnorm=remaining_validcitationsnorm;
+new_titles_as_ASCII=titles_as_dictionaryindices;
+
+low_25_percent = max(prctile(validcitations,[0 25]));
+high_25_percent = min(prctile(validcitations,[75 100]));
+
+idxlow=validcitations<=low_25_percent;
+idxhigh=validcitations>=high_25_percent;
+
+low_25_percentsel_cit=validcitations(idxlow);
+high_25_percentsel_cit=validcitations(idxhigh);
+
+low_25_percentsel_citnorm=validcitationsnorm(idxlow);
+high_25_percentsel_citnorm=validcitationsnorm(idxhigh);
+
+low_25_percentsel_titles=new_titles_as_ASCII(idxlow,:);
+high_25_percentsel_titles=new_titles_as_ASCII(idxhigh,:);
+
+mergedvaltitleesel=[[low_25_percentsel_titles;high_25_percentsel_titles],[zeros(size(low_25_percentsel_titles(:,1)));ones(size(high_25_percentsel_titles(:,1)))]];
+
+mergedvalcitesel=[[low_25_percentsel_cit;high_25_percentsel_cit],[zeros(size(low_25_percentsel_cit(:,1)));ones(size(high_25_percentsel_cit(:,1)))]];
+
+mergedvalcitenormsel=[[low_25_percentsel_citnorm;high_25_percentsel_citnorm],[zeros(size(low_25_percentsel_citnorm(:,1)));ones(size(high_25_percentsel_citnorm(:,1)))]];
+
+
+
 save('dictionary','dictionaryuniquethresh')
 dictionary=dictionaryuniquethresh';
 dictionary=cell2table(dictionary);
@@ -269,15 +297,60 @@ titlesDict=titles_as_dictionaryindices;
 titlesDict=array2table(titlesDict);
 writetable(titlesDict)
 
+save('titlesDict_low','low_25_percentsel_titles')
+titlesASCII_low=low_25_percentsel_titles;
+titlesDict_low=array2table(titlesASCII_low);
+writetable(titlesDict_low)
+
+save('titlesDict_high','high_25_percentsel_titles')
+titlesDict_high=high_25_percentsel_titles;
+titlesDict_high=array2table(titlesDict_high);
+writetable(titlesDict_high)
+
+save('titlesDict_high_low_merged','mergedvaltitleesel')
+titlesDict_high_low_merged=mergedvaltitleesel;
+titlesDict_high_low_merged=array2table(titlesDict_high_low_merged);
+writetable(titlesDict_high_low_merged)
+
 save('citationsDict','remaining_validcitations')
 citationsDict=remaining_validcitations;
 citationsDict=array2table(citationsDict);
 writetable(citationsDict)
 
+save('citationsDict_low','low_25_percentsel_cit')
+citations_raw_low=low_25_percentsel_cit;
+citationsDict_low=array2table(citations_raw_low);
+writetable(citationsDict_low)
+
+save('citationsDict_high','high_25_percentsel_cit')
+citations_raw_high=high_25_percentsel_cit;
+citationsDict_high=array2table(citations_raw_high);
+writetable(citationsDict_high)
+
+save('citationsDict_high_low_merged','mergedvalcitesel')
+citations_raw_high_low_merged=mergedvalcitesel;
+citationsDict_high_low_merged=array2table(citations_raw_high_low_merged);
+writetable(citationsDict_high_low_merged)
+
 save('citationsnormDict','remaining_validcitationsnorm')
 citationsnormDict=remaining_validcitationsnorm;
 citationsnormDict=array2table(citationsnormDict);
 writetable(citationsnormDict)
+
+save('citationsnormDict_low','low_25_percentsel_cit')
+citations_raw_low=low_25_percentsel_citnorm;
+citationsnormDict_low=array2table(citations_raw_low);
+writetable(citationsnormDict_low)
+
+save('citationsnormDict_high','high_25_percentsel_cit')
+citations_raw_high=high_25_percentsel_citnorm;
+citationsnormDict_high=array2table(citations_raw_high);
+writetable(citationsnormDict_high)
+
+save('citationsnormDict_high_low_merged','mergedvalcitenormsel')
+citations_raw_high_low_merged=mergedvalcitenormsel;
+citationsnormDict_high_low_merged=array2table(citations_raw_high_low_merged);
+writetable(citationsnormDict_high_low_merged)
 
 %% again for ASCII represented titles for making ASCII for same titles as Dict
 new_ASCII=table2array(titlesDict);
