@@ -18,6 +18,8 @@ result: all kinds of .mat and .txt files (contained by titlesASCII_all.zip and t
 -------
 the function /scriptsPi/scholarcrawler.py was adapted from ckreibich (https://github.com/ckreibich/scholar.py) according to the standard [BSD license](http://opensource.org/licenses/BSD-2-Clause)
 
+the function word_embedding.py was adapted from the chainer word2vec example (https://github.com/chainer/chainer/tree/master/examples/word2vec)
+
 ### License:
 -------
 
