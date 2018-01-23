@@ -5,7 +5,7 @@ This code implements skip-gram model and continuous-bow model.
 import argparse
 import collections
 
-from word_embedding_tommy import get_dictionary,get_title
+from prepare_embedding import get_dictionary,get_title
 
 import numpy as np
 import six
@@ -19,9 +19,6 @@ import chainer.optimizers as O
 from chainer import reporter
 from chainer import training
 from chainer.training import extensions
-
-filename_dict = 'dictionary.txt'
-filename_title = 'titlesDict_high.txt'
 
 class ContinuousBoW(chainer.Chain):
     """Definition of Continuous Bag of Words Model"""
@@ -198,8 +195,8 @@ def main():
 
     # Load the dataset
     # train, val, _ = chainer.datasets.get_ptb_words()
-    filename_dict=args.inputdict
-    filename_title = args.inputtitles
+    filename_dict = args.inputdict
+    filename_title  = args.inputtitles
     vocab = get_dictionary(filename_dict)
     train, val = get_title(filename_title, vocab)
     counts = collections.Counter(train)
@@ -270,8 +267,9 @@ def main():
         f.write('%d %d\n' % (len(index2word), args.unit))
         w = cuda.to_cpu(model.embed.W.data)
         for i, wi in enumerate(w):
-            v = ' '.join(map(str, wi))
-            f.write('%s %s\n' % (index2word[i], v))
+            if i>0 and i < len(w):
+                v = ' '.join(map(str, wi))
+                f.write('%s %s\n' % (index2word[i], v))
 
 
 if __name__ == '__main__':

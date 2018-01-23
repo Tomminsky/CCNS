@@ -14,7 +14,7 @@ def get_title(namefile,dictionary):
         lines = ''
         next(file)
         for line in file:
-            lines = lines + line.replace(',0', '').replace('\n', '') + ',' + str(dictionary.get('<eol>')) + ','
+            lines = lines + line.replace(',0', '').replace('\n', '').replace('"','') + ',' + str(dictionary.get('<eol>')) + ','
 
     titles=np.array(map(int,lines[:-1].split(',')))
 
