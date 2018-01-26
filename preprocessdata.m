@@ -121,7 +121,7 @@ load('citations_norm')
 %
 
 max_spec_char=20;
-min_occurance_per_word_in_dict=5;
+max_words_in_dict=20000;
 
 dictionary_titles_raw=lower(char(new_titles_as_ASCII));
 
@@ -211,13 +211,22 @@ idx_empty_cells=cellfun(@length ,dictionary)<1;
 dictionary_new=dictionary(~idx_empty_cells);
 occurance_new=occurance(~idx_empty_cells);
 
+[~,min_occurance_per_word_in_dict]=min(arrayfun(@(x) abs(max_words_in_dict-sum(occurance_new>x)),1:200));
+
+unknowncharidx=occurance_new<min_occurance_per_word_in_dict;
+unknownwords=dictionary_new(unknowncharidx);
+
+dictionary_new(unknowncharidx)={'<unknown>'};
+
+
+
 idx_valid_entry=(cellfun(@isvarname,dictionary_new) | ...
     ismember(dictionary_new,listofallowedspecialcharacters) | ...
     arrayfun(@(x) ~isnan(str2double(dictionary_new{x}(1))),1:size(dictionary_new,2)) ...
     ) & ...
     occurance_new>=min_occurance_per_word_in_dict;
 
-dictionaryunique=dictionary_new(idx_valid_entry);
+dictionaryunique=[dictionary_new(idx_valid_entry),'<unknown>'];
 
 %
 titles_as_dictionaryindices=nan(size(new_titles_as_ASCII));
@@ -232,7 +241,8 @@ m=0;
 dictionaryuniquethresh=sort(dictionaryunique);
 
 
-%%% actual word index coding
+
+% actual word index coding
 idx_contains_not_in_dict_words=zeros(size(dictionary_titles,1),1);
 
 for n=1:numeltitles
@@ -242,7 +252,7 @@ for n=1:numeltitles
     sizewordidx=size(wordidx,2);
     titles_as_dictionaryindices(n,1:sizewordidx)=wordidx;
     titles_as_dictionaryindices(n,sizewordidx+1:end)=zeros;
-    
+    dictionary_titles{n}(~ismember(dictionary_titles{n},dictionaryuniquethresh))={'<unknown>'};
     idx_contains_not_in_dict_words(n)=sum(ismember(dictionary_titles{n},dictionaryuniquethresh)==0)>0;
     m=m+1;
     currtime=toc;
@@ -284,8 +294,6 @@ mergedvaltitleesel=[[low_25_percentsel_titles;high_25_percentsel_titles],[zeros(
 mergedvalcitesel=[[low_25_percentsel_cit;high_25_percentsel_cit],[zeros(size(low_25_percentsel_cit(:,1)));ones(size(high_25_percentsel_cit(:,1)))]];
 
 mergedvalcitenormsel=[[low_25_percentsel_citnorm;high_25_percentsel_citnorm],[zeros(size(low_25_percentsel_citnorm(:,1)));ones(size(high_25_percentsel_citnorm(:,1)))]];
-
-
 
 save('dictionary','dictionaryuniquethresh')
 dictionary=dictionaryuniquethresh';
@@ -352,7 +360,7 @@ citations_raw_high_low_merged=mergedvalcitenormsel;
 citationsnormDict_high_low_merged=array2table(citations_raw_high_low_merged);
 writetable(citationsnormDict_high_low_merged)
 
-%% again for ASCII represented titles for making ASCII for same titles as Dict
+% again for ASCII represented titles for making ASCII for same titles as Dict
 new_ASCII=table2array(titlesDict);
 dictionaryuniquethresh=[dictionaryuniquethresh,{' '}];
 whitespace=find(strcmp(dictionaryuniquethresh,{' '}));
@@ -469,4 +477,7 @@ citations_norm_high_low_merged_DictComp=array2table(citations_norm_high_low_merg
 writetable(citations_norm_high_low_merged_DictComp)
 
 disp('done.')
+
+unix(['sh do_embedding.sh ' pwd '/titlesDict.txt ' pwd ' dictionary.txt']);
+
 time_whole_script=toc(time_whole_script)
