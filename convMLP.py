@@ -174,6 +174,8 @@ accplot = np.zeros((maxiter, 1), dtype=float)  # Store  test accuracy for plot
 lossplot = np.zeros((maxiter, 1), dtype=float)  # Store test loss for plot
 
 for epoch in range(n_epoch):
+    sum_accuracy_train = 0.5  # Creating a staring variable
+    sum_loss_train = 0
     for iteration in range(10,maxiter):  # start with epoch 1 (instead of 0)
         print('epoch' , epoch, ' - iteration ', iteration)  # prompting the word 'epoch ' and the coresponding training epoch to the Python Consol
 
@@ -210,8 +212,7 @@ for epoch in range(n_epoch):
 
         batchsize = len(train_batch)  # Training batchsize, blackboard specified 32
 
-        sum_accuracy_train = 0  # Creating a staring variable
-        sum_loss_train = 0
+
 
         input = chainer.Variable(train_batch.astype('float32'))
         target = chainer.Variable(train_labels.astype('int32').ravel())
@@ -231,10 +232,10 @@ for epoch in range(n_epoch):
 
         sum_loss_train += float(loss.data) * len(
             target.data)  # Times length of current batch for relative impact
-        sum_accuracy_train += float(acc.data) * len(target.data)
+        sum_accuracy_train += float(acc.data) * len(target.data) / N
 
         print('Training mean loss =', (sum_loss_train / N), ',Training Accuracy =',
-              (sum_accuracy_train / N))  # To check values during process.
+              (sum_accuracy_train / iteration))  # To check values during process.
 
         # Testing the model
     sum_accuracy = 0  # Creating a staring variable
