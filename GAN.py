@@ -20,7 +20,7 @@ def get_dictionary(namefile):
     print('done.')
     return dict_
 
-def get_titles(namefile,dictionary):
+def get_titles(namefile,dictionary,shuffle=0):
     print('loading ' + namefile + '...')
     with open(namefile) as file:
         lines = ''
@@ -29,7 +29,16 @@ def get_titles(namefile,dictionary):
             lines = lines + line.replace(',0', '').replace('\n', '').replace('"', '') + ',' + str(
                 dictionary.get('<eol>')) + ','
     print('done.')
-    return np.array(map(int, lines[:-1].split(',')))
+    lines=np.array(map(int, lines[:-1].split(',')))
+    if shuffle:
+        endoftitles = [x for x in range(len(lines)) if lines[x] == dictionary.get('<eol>')]
+        startoftitles = [0] + list(np.add(endoftitles[:-1], 1))
+        idx = np.random.permutation(len(endoftitles))
+        endoftitles=[endoftitles[x] for x in idx]
+        startoftitles = [startoftitles[x] for x in idx]
+        lines=[lines[range(startoftitles[x], endoftitles[x] + 1)] for x in range(len(endoftitles))]
+
+    return lines
 
 def get_embeddedwords(namefile='word2vec.model'):
     print('loading ' + namefile + '...')
@@ -59,15 +68,12 @@ def get_max_words_over_titles(titles_raw,dictionary):
     max_title_length_in_batch = max(np.abs(np.subtract(startoftitles, endoftitles))) + 1
     return max_title_length_in_batch
 
-def createtitlebatch(titles_raw,dictionary,skipbatches=0,numtitles=80,testpart=0.1,shuffleinit=0):
+def createtitlebatch(titles_raw,dictionary,skipbatches=0,numtitles=80,testpart=0.1):
 
     skip_=numtitles*skipbatches
 
     endoftitles = [x for x in range(len(titles_raw)) if titles_raw[x] == dictionary.get('<eol>')]
     startoftitles = [0] + list(np.add(endoftitles[:-1], 1))
-
-    if shuffleinit:
-        idx = np.random.permutation(len(endoftitles))
 
     max_title_length_in_batch=max(np.abs(np.subtract(startoftitles,endoftitles)))+1
 
@@ -85,8 +91,6 @@ def createtitlebatch(titles_raw,dictionary,skipbatches=0,numtitles=80,testpart=0
         randidx=np.random.permutation(len(title_matrix))
         idx_train=randidx[:-int(np.floor(len(randidx)*(testpart)))]
         idx_test=randidx[int(np.floor(len(randidx)*(1-testpart))):]
-
-
 
         train = [title_matrix[x] for x in idx_train]
         test = [title_matrix[x] for x in idx_test]
@@ -174,17 +178,17 @@ word2index,index2word,w=get_embeddedwords()
 
 dictionary=get_dictionary('dictionary.txt')
 
-titles_high_raw=get_titles('titlesDict_high.txt',dictionary)
+titles_high_raw=get_titles('titlesDict_high.txt',dictionary,shuffle=1)
 
 epoch = 20 # for the convolutionary network 50 training epochs are used
 words_per_title = get_max_words_over_titles(titles_high_raw,dictionary)
 dis = MLPConv()
 gen = generator(words_per_title)
 
-opti_gen = optimizers.AdaGrad(lr=0.001)
+opti_gen = optimizers.MomentumSGD(lr=0.01,momentum=0.9)
 opti_gen.setup(gen)
 
-opti_dis = optimizers.AdaDelta()
+opti_dis = optimizers.MomentumSGD(lr=0.001,momentum=0.9)
 opti_dis.setup(dis)
 
 n_epoch = epoch
@@ -214,7 +218,7 @@ for epoch in range(n_epoch):
 
         # training the MLP with the last chainer method from guide; no cleargrads()!
 
-        train_batch, _ = createtitlebatch(titles_high_raw, dictionary, skipbatches=iteration,testpart=0.1)
+        train_batch, _ = createtitlebatch(titles_high_raw, dictionary, skipbatches=iteration,testpart=0.1,shuffleinit=1)
 
         train_batch2 = chainer.Variable(np.random.uniform(-1, 1,(len(train_batch),words_per_title*200) ).astype('float32'))
 
@@ -242,11 +246,11 @@ for epoch in range(n_epoch):
 
         sum_loss_train_dis += float(Loss_dis.data) * len(train_batch)  # Times length of current batch for relative impact
         sum_loss_train_gen += float(Loss_gen.data) * len(train_batch)
-        sum_accuracy_train += np.sum(np.int32(judge_fake[:, 0].data < 0) + np.int32(judge_real[:, 0].data > 0)) / (len(train_batch) * 2.)
+        sum_accuracy_train += (sum(list(np.int32(judge_fake[:, 0].data < 0)) + list(np.int32(judge_real[:, 0].data > 0))) / (len(train_batch) * 2.))
 
         print('Training mean loss Discriminator =', (sum_loss_train_dis / len(train_batch)),
               ', Training mean loss Generator =', (sum_loss_train_gen / len(train_batch)), ',Training Accuracy =',
-              (sum_accuracy_train / iteration))  # To check values during process.
+              (sum_accuracy_train / (iteration-9)))  # To check values during process.
 
     print(vec2title(train_batch2[0][0],w,index2word))
 

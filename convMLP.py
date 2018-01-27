@@ -19,7 +19,7 @@ def get_dictionary(namefile):
     print('done.')
     return dict_
 
-def get_titles(namefile,dictionary):
+def get_titles(namefile,dictionary,shuffle=0):
     print('loading ' + namefile + '...')
     with open(namefile) as file:
         lines = ''
@@ -28,7 +28,16 @@ def get_titles(namefile,dictionary):
             lines = lines + line.replace(',0', '').replace('\n', '').replace('"', '') + ',' + str(
                 dictionary.get('<eol>')) + ','
     print('done.')
-    return np.array(map(int, lines[:-1].split(',')))
+    lines = np.array(map(int, lines[:-1].split(',')))
+    if shuffle:
+        endoftitles = [x for x in range(len(lines)) if lines[x] == dictionary.get('<eol>')]
+        startoftitles = [0] + list(np.add(endoftitles[:-1], 1))
+        idx = np.random.permutation(len(endoftitles))
+        endoftitles=[endoftitles[x] for x in idx]
+        startoftitles = [startoftitles[x] for x in idx]
+        lines=[lines[range(startoftitles[x], endoftitles[x] + 1)] for x in range(len(endoftitles))]
+
+    return lines
 
 def get_embeddedwords(namefile='word2vec.model'):
     print('loading ' + namefile + '...')
@@ -140,8 +149,8 @@ word2index,index2word,w=get_embeddedwords()
 
 dictionary=get_dictionary('dictionary.txt')
 
-titles_high_raw=get_titles('titlesDict_high.txt',dictionary)
-titles_low_raw=get_titles('titlesDict_low.txt',dictionary)
+titles_high_raw=get_titles('titlesDict_high.txt',dictionary,shuffle=1)
+titles_low_raw=get_titles('titlesDict_low.txt',dictionary,shuffle=1)
 
 epoch = 20 # for the convolutionary network 50 training epochs are used
 unit = 200
@@ -175,7 +184,7 @@ accplot = np.zeros((maxiter, 1), dtype=float)  # Store  test accuracy for plot
 lossplot = np.zeros((maxiter, 1), dtype=float)  # Store test loss for plot
 start_timer = time.time()
 for epoch in range(n_epoch):
-    sum_accuracy_train = 0.5  # Creating a staring variable
+    sum_accuracy_train = 0  # Creating a staring variable
     sum_loss_train = 0
     for iteration in range(10,maxiter):  # start with epoch 1 (instead of 0)
         print('epoch' , epoch, ' - iteration ', iteration)  # prompting the word 'epoch ' and the coresponding training epoch to the Python Consol
@@ -236,7 +245,7 @@ for epoch in range(n_epoch):
         sum_accuracy_train += float(acc.data) * len(target.data) / N
 
         print('Training mean loss =', (sum_loss_train / N), ',Training Accuracy =',
-              (sum_accuracy_train / iteration))  # To check values during process.
+              (sum_accuracy_train / (iteration-9)))  # To check values during process.
 
         # Testing the model
     sum_accuracy = 0.5  # Creating a staring variable
