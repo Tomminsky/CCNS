@@ -1,4 +1,4 @@
-#!/Users/Tommy/anaconda python
+#!/Users/Tommy/anaconda/bin python
 """Sample script of word embedding model.
 This code implements skip-gram model and continuous-bow model.
 """

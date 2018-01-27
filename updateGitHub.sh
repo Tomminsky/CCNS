@@ -11,3 +11,4 @@ scp -r * /Users/Tommy/Github_repositories/CCNS/
 scp -r ../preprocessdata.m /Users/Tommy/Github_repositories/CCNS/preprocessdata.m
 scp -r ../preprocessdata.sh /Users/Tommy/Github_repositories/CCNS/preprocessdata.sh
 scp -r ../updateGitHub.sh  /Users/Tommy/Github_repositories/CCNS/updateGitHub.sh
+scp -r ../*.py /Users/Tommy/Github_repositories/CCNS/

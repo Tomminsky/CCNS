@@ -1,3 +1,4 @@
+#!/Users/Tommy/anaconda/bin python
 from __future__ import print_function
 import numpy as np
 import chainer
@@ -8,7 +9,7 @@ from chainer import reporter
 from chainer import optimizers
 import chainer.functions as F
 import chainer.links as L
-from chainer.datasets import TupleDataset
+import time
 
 def get_dictionary(namefile):
     print('loading '+ namefile + '...')
@@ -172,7 +173,7 @@ maxiter=1500 # maximum is [number of titles -1600 (2 x 800 for both groups that 
 
 accplot = np.zeros((maxiter, 1), dtype=float)  # Store  test accuracy for plot
 lossplot = np.zeros((maxiter, 1), dtype=float)  # Store test loss for plot
-
+start_timer = time.time()
 for epoch in range(n_epoch):
     sum_accuracy_train = 0.5  # Creating a staring variable
     sum_loss_train = 0
@@ -238,7 +239,7 @@ for epoch in range(n_epoch):
               (sum_accuracy_train / iteration))  # To check values during process.
 
         # Testing the model
-    sum_accuracy = 0  # Creating a staring variable
+    sum_accuracy = 0.5  # Creating a staring variable
     sum_loss = 0
     perm = np.random.permutation(N_test)  # permutation for the indices
     input = chainer.Variable(test_batch.astype('float32'))
@@ -247,11 +248,8 @@ for epoch in range(n_epoch):
     model.cleargrads()
 
     predictions = model(input)
-    # print(predictions)
 
     loss = softmax_cross_entropy.softmax_cross_entropy(predictions, target)  # For multi class predictions
-    # fakeloss = 1-accuracy.accuracy(predictions, target)
-    # fakeloss.backward()
 
     acc = accuracy.accuracy(predictions, target)
 
@@ -262,6 +260,7 @@ for epoch in range(n_epoch):
 
     accplot_train[epoch] = sum_accuracy / N_test
     lossplot_train[epoch] = sum_loss / N_test
-
-
+    print('time elapsed: ' + str((time.time() - start_timer) / 60) + 'm')
+    print('iterations per minute: ' + str((maxiter-10)/((time.time() - start_timer) / 60 / (epoch + 1))))
+    print('time per epoch: ' + str((time.time() - start_timer) / 60 / (epoch + 1)) + 'm')
 

@@ -1,3 +1,4 @@
+#!/Users/Tommy/anaconda/bin python
 import six
 import numpy as np
 
