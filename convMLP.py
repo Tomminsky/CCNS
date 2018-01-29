@@ -10,6 +10,7 @@ from chainer import optimizers
 import chainer.functions as F
 import chainer.links as L
 import time
+from matplotlib import pyplot as plt
 
 def get_dictionary(namefile):
     print('loading '+ namefile + '...')
@@ -35,8 +36,8 @@ def get_titles(namefile,dictionary,shuffle=0):
         idx = np.random.permutation(len(endoftitles))
         endoftitles=[endoftitles[x] for x in idx]
         startoftitles = [startoftitles[x] for x in idx]
-        lines=[lines[range(startoftitles[x], endoftitles[x] + 1)] for x in range(len(endoftitles))]
-
+        lines = [lines[range(startoftitles[x], endoftitles[x] + 1)] for x in range(len(endoftitles))]
+        lines = np.hstack(lines)
     return lines
 
 def get_embeddedwords(namefile='word2vec.model'):
@@ -57,8 +58,15 @@ def get_embeddedwords(namefile='word2vec.model'):
             word2index[word] = i
             index2word[i] = word
             w[i] = np.array([float(s) for s in ss[1:]], dtype=np.float32)
+    w[word2index[' ']] = np.zeros((1, 200))
     print('done.')
     return word2index,index2word,w
+
+def get_max_words_over_titles(titles_raw,dictionary):
+    endoftitles = [x for x in range(len(titles_raw)) if titles_raw[x] == dictionary.get('<eol>')]
+    startoftitles = [0] + list(np.add(endoftitles[:-1], 1))
+    max_title_length_in_batch = max(np.abs(np.subtract(startoftitles, endoftitles))) + 1
+    return max_title_length_in_batch
 
 def createtitlebatch(titles_raw,dictionary,skipbatches=0,numtitles=80,testpart=0.1):
 
@@ -94,6 +102,17 @@ def createtitlebatch(titles_raw,dictionary,skipbatches=0,numtitles=80,testpart=0
 
         return np.asarray(train).reshape((len(train),1,max_title_length_in_batch,200)),np.asarray(test).reshape((len(test),1,max_title_length_in_batch,200))
 
+def vec2title(vec_,dict_trans,index2word):
+
+    title_recon=''
+    for i in range(len(vec_)):
+        word_ = vec_.data[i]
+        word_ = np.tile(word_,(len(w),1))
+        dist_=np.sqrt(np.sum((dict_trans-word_)**2,1))
+        title_recon=title_recon+index2word[dist_.argmin()]+' '
+
+    return title_recon
+
 class Classifier(link.Chain):
 
     compute_accuracy = True
@@ -127,24 +146,23 @@ class Classifier(link.Chain):
         return self.loss
 
 class MLPConv(chainer.Chain):
-    def __init__(self):
+    def __init__(self,words_per_title):
         super(MLPConv, self).__init__()
         with self.init_scope():
+            self.words_per_title = words_per_title
+            self.l0 = L.Linear(None,words_per_title*200)
             self.conv = L.Convolution2D(in_channels=1, out_channels=1, ksize=3)
             self.l1 = L.Linear(None, 50)
             self.l2 = L.Linear(None, 2)
 
     def __call__(self, x):
-        x2 = F.relu(self.conv(x))
+        x1=F.relu(self.l0(x))
+        x1 = F.reshape(x1,(x.data.shape[0], 1, self.words_per_title, 200))
+        x2 = F.relu(self.conv(x1))
         x3 = F.max_pooling_2d(x2, 3)
-        y = self.l2(F.dropout(F.relu(self.l1(x3))))
+        y = F.sigmoid(self.l2(F.dropout(F.relu(self.l1(x3)))))
         return y
 
-### GAN ###
-# only take correctly classified high rank
-# inout noise matrix of length of one title vector
-# let it work
-# get title
 word2index,index2word,w=get_embeddedwords()
 
 dictionary=get_dictionary('dictionary.txt')
@@ -152,13 +170,15 @@ dictionary=get_dictionary('dictionary.txt')
 titles_high_raw=get_titles('titlesDict_high.txt',dictionary,shuffle=1)
 titles_low_raw=get_titles('titlesDict_low.txt',dictionary,shuffle=1)
 
+words_per_title = max([get_max_words_over_titles(titles_high_raw,dictionary),get_max_words_over_titles(titles_low_raw,dictionary)])
+
 epoch = 20 # for the convolutionary network 50 training epochs are used
 unit = 200
-model = MLPConv()
+model = MLPConv(words_per_title)
 classifier_model = Classifier(model)
 
 # Setup an optimizer
-optimizer = optimizers.AdaDelta()  # Using Stochastic Gradient Descent
+optimizer = optimizers.AdaGrad()  # Using Stochastic Gradient Descent
 optimizer.setup(classifier_model)
 
 n_epoch = epoch
@@ -178,11 +198,19 @@ padd_test=np.zeros((test_batch_raw.shape[0],test_batch_raw.shape[1],np.abs(shape
 numtitles = len([x for x in range(len(titles_high_raw)) if titles_high_raw[x] == dictionary.get('<eol>')])-num_validation_titles+\
               len([x for x in range(len(titles_low_raw)) if titles_low_raw[x] == dictionary.get('<eol>')])-num_validation_titles
 
-maxiter=1500 # maximum is [number of titles -1600 (2 x 800 for both groups that are used for validation)]/ 80 (default number of titles in one batch) - 80
+maxiter=1800 # maximum is [number of titles -1600 (2 x 800 for both groups that are used for validation)]/ 80 (default number of titles in one batch) - 80
 
 accplot = np.zeros((maxiter, 1), dtype=float)  # Store  test accuracy for plot
 lossplot = np.zeros((maxiter, 1), dtype=float)  # Store test loss for plot
 start_timer = time.time()
+
+
+vec2title(chainer.Variable(np.asarray(test_batch_raw[np.random.randint(0,len(test_batch_raw)-1)][0])),w,index2word)
+
+overall_acc = []
+overall_loss = []
+overall_acc_val = []
+overall_loss_val = []
 for epoch in range(n_epoch):
     sum_accuracy_train = 0  # Creating a staring variable
     sum_loss_train = 0
@@ -242,13 +270,14 @@ for epoch in range(n_epoch):
 
         sum_loss_train += float(loss.data) * len(
             target.data)  # Times length of current batch for relative impact
-        sum_accuracy_train += float(acc.data) * len(target.data) / N
-
+        sum_accuracy_train += float(acc.data)
+        overall_acc.append(float(acc.data))
+        overall_loss.append(float(loss.data))
         print('Training mean loss =', (sum_loss_train / N), ',Training Accuracy =',
               (sum_accuracy_train / (iteration-9)))  # To check values during process.
 
         # Testing the model
-    sum_accuracy = 0.5  # Creating a staring variable
+    sum_accuracy = 0  # Creating a staring variable
     sum_loss = 0
     perm = np.random.permutation(N_test)  # permutation for the indices
     input = chainer.Variable(test_batch.astype('float32'))
@@ -273,3 +302,38 @@ for epoch in range(n_epoch):
     print('iterations per minute: ' + str((maxiter-10)/((time.time() - start_timer) / 60 / (epoch + 1))))
     print('time per epoch: ' + str((time.time() - start_timer) / 60 / (epoch + 1)) + 'm')
 
+with open('Accuracy_val.txt', 'w') as file_handler:
+    for item in accplot_train:
+        file_handler.write("{}\n".format(item))
+
+with open('Loss_val.txt', 'w') as file_handler:
+    for item in lossplot_train:
+        file_handler.write("{}\n".format(item))
+
+with open('Accuracy_train.txt', 'w') as file_handler:
+    for item in overall_acc:
+        file_handler.write("{}\n".format(item))
+
+with open('Loss_train.txt', 'w') as file_handler:
+    for item in overall_loss:
+        file_handler.write("{}\n".format(item))
+
+fig = plt.figure()
+plt.plot(accplot_train)
+plt.title('Acc Val')
+plt.show()
+
+fig2 = plt.figure()
+plt.plot(lossplot_train)
+plt.title('Loss Val')
+plt.show()
+
+fig3 = plt.figure()
+plt.plot(overall_acc)
+plt.title('Acc Train')
+plt.show()
+
+fig4 = plt.figure()
+plt.plot(overall_loss)
+plt.title('Loss Train')
+plt.show()
