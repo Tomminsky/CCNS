@@ -11,6 +11,34 @@ import chainer.functions as F
 import chainer.links as L
 import time
 from matplotlib import pyplot as plt
+import math
+
+def mediansmooth(datain, kernelwidth):
+
+    # note: this guy is only for plotting purposes and does what you'd expect: a median smooth
+
+    padd_beg = int(math.ceil((float(kernelwidth) / 2)))
+    padd_end = int(math.floor((float(kernelwidth) / 2)))
+
+    padd_beg = np.empty((padd_beg))
+    padd_beg[:] = np.NAN
+
+    padd_end = np.empty((padd_end))
+    padd_end[:] = np.NAN
+
+    datatmp = np.concatenate((padd_beg, datain, padd_end))
+
+    x = np.size(np.matrix(datatmp), 1)
+    data_pre = np.empty((x, kernelwidth), dtype=np.float32)
+    data_pre[:] = np.NAN
+
+    for i in range(0, kernelwidth):
+        data_pre[range(0, x - i), i] = datatmp[range(i, x)]
+
+    data_pre = data_pre[range(1, x - kernelwidth + 1)]
+    data_out = np.nanmedian(data_pre, axis=1)
+
+    return data_out
 
 def get_dictionary(namefile):
     print('loading '+ namefile + '...')
@@ -172,8 +200,6 @@ titles_low_raw=get_titles('titlesDict_low.txt',dictionary,shuffle=1)
 
 words_per_title = max([get_max_words_over_titles(titles_high_raw,dictionary),get_max_words_over_titles(titles_low_raw,dictionary)])
 
-epoch = 20 # for the convolutionary network 50 training epochs are used
-unit = 200
 model = MLPConv(words_per_title)
 classifier_model = Classifier(model)
 
@@ -181,159 +207,148 @@ classifier_model = Classifier(model)
 optimizer = optimizers.AdaGrad()  # Using Stochastic Gradient Descent
 optimizer.setup(classifier_model)
 
-n_epoch = epoch
-
-accplot_train = np.zeros((n_epoch, 1), dtype=float) # Store train accuracy for plot
-lossplot_train = np.zeros((n_epoch, 1), dtype=float)  # Store train loss for plot
-
-epocheloss=[]
+n_epoch = 5
 
 num_validation_titles=800
 
-test_batch_raw, _ = createtitlebatch(titles_high_raw, dictionary, skipbatches=0,numtitles=num_validation_titles)
-test_batch2_raw, _ = createtitlebatch(titles_low_raw, dictionary, skipbatches=0,numtitles=num_validation_titles)
-shape_diff=test_batch_raw.shape[2]-test_batch2_raw.shape[2]
-padd_test=np.zeros((test_batch_raw.shape[0],test_batch_raw.shape[1],np.abs(shape_diff),test_batch_raw.shape[3]))
-
-numtitles = len([x for x in range(len(titles_high_raw)) if titles_high_raw[x] == dictionary.get('<eol>')])-num_validation_titles+\
-              len([x for x in range(len(titles_low_raw)) if titles_low_raw[x] == dictionary.get('<eol>')])-num_validation_titles
-
 maxiter=1800 # maximum is [number of titles -1600 (2 x 800 for both groups that are used for validation)]/ 80 (default number of titles in one batch) - 80
 
-accplot = np.zeros((maxiter, 1), dtype=float)  # Store  test accuracy for plot
-lossplot = np.zeros((maxiter, 1), dtype=float)  # Store test loss for plot
+
+test_batch_high_raw, _ = createtitlebatch(titles_high_raw, dictionary, skipbatches=0,numtitles=num_validation_titles)
+test_batch_low_raw, _ = createtitlebatch(titles_low_raw, dictionary, skipbatches=0,numtitles=num_validation_titles)
+
+shape_diff=test_batch_high_raw.shape[2]-test_batch_low_raw.shape[2]
+
+padd_test=np.zeros((test_batch_high_raw.shape[0],test_batch_high_raw.shape[1],np.abs(shape_diff),test_batch_high_raw.shape[3]))
+
+test_batch_high=test_batch_high_raw
+test_batch_low=test_batch_low_raw
+
+if shape_diff != 0:
+    padd_=np.zeros((test_batch_high_raw.shape[0],test_batch_high_raw.shape[1],np.abs(shape_diff),test_batch_high_raw.shape[3]))
+    if shape_diff>0:
+        test_batch_low = np.concatenate((test_batch_low_raw, padd_test), 2)
+    elif shape_diff<0:
+        test_batch_high = np.concatenate((test_batch_high_raw, padd_test), 2)
+test_labels = np.ones((len(test_batch_high), 1))
+test_labels = np.concatenate((test_labels, np.zeros((len(test_batch_low), 1))), 0)
+
+test_batch = np.concatenate((test_batch_high, test_batch_low), 0)
+
+N_test = len(test_batch)
+
 start_timer = time.time()
 
+acc_train = []
+loss_train = []
 
-vec2title(chainer.Variable(np.asarray(test_batch_raw[np.random.randint(0,len(test_batch_raw)-1)][0])),w,index2word)
+acc_val = []
+loss_val = []
 
-overall_acc = []
-overall_loss = []
-overall_acc_val = []
-overall_loss_val = []
 for epoch in range(n_epoch):
-    sum_accuracy_train = 0  # Creating a staring variable
-    sum_loss_train = 0
-    for iteration in range(10,maxiter):  # start with epoch 1 (instead of 0)
-        print('epoch' , epoch, ' - iteration ', iteration)  # prompting the word 'epoch ' and the coresponding training epoch to the Python Consol
 
-        # training the MLP with the last chainer method from guide; no cleargrads()!
+    for iteration in range(10,maxiter):  # start with epoch 10 due to the skip for creating the validation dataset
+        print('epoch' , epoch, ' - iteration ', iteration)
 
-        train_batch, _ = createtitlebatch(titles_high_raw, dictionary, skipbatches=iteration)
+        train_batch_high, _ = createtitlebatch(titles_high_raw, dictionary, skipbatches=iteration)
 
-        train_labels=np.ones((len(train_batch),1))
-        test_labels = np.ones((len(test_batch_raw), 1))
+        train_batch_low, _ = createtitlebatch(titles_low_raw, dictionary, skipbatches=iteration)
 
-        train_batch2, _ = createtitlebatch(titles_low_raw, dictionary, skipbatches=iteration)
+        shape_diff=train_batch_high.shape[2]-train_batch_low.shape[2]
 
-        shape_diff=train_batch.shape[2]-train_batch2.shape[2]
-
-        test_batch=test_batch_raw
-        test_batch2 = test_batch2_raw
         if shape_diff != 0:
-            padd_=np.zeros((train_batch.shape[0],train_batch.shape[1],np.abs(shape_diff),train_batch.shape[3]))
+            padd_=np.zeros((train_batch_high.shape[0],train_batch_high.shape[1],np.abs(shape_diff),train_batch_high.shape[3]))
             if shape_diff>0:
-                train_batch2 = np.concatenate((train_batch2,padd_),2)
-                test_batch2 = np.concatenate((test_batch2, padd_test), 2)
+                train_batch_low = np.concatenate((train_batch_low,padd_),2)
             elif shape_diff<0:
-                train_batch = np.concatenate((train_batch, padd_), 2)
-                test_batch = np.concatenate((test_batch, padd_test), 2)
+                train_batch_high = np.concatenate((train_batch_high, padd_), 2)
 
-        train_labels = np.concatenate((train_labels, np.zeros((len(train_batch2), 1))), 0)
-        test_labels = np.concatenate((test_labels, np.zeros((len(test_batch2), 1))), 0)
+        train_labels_high = np.ones((len(train_batch_high), 1))
+        train_labels = np.concatenate((train_labels_high, np.zeros((len(train_batch_low), 1))), 0)
 
-        train_batch = np.concatenate((train_batch, train_batch2), 0)
-        test_batch = np.concatenate((test_batch, test_batch2), 0)
-
-        N = len(train_batch)  # training data size
-        N_test = len(test_batch)  # test data size
-
-        batchsize = len(train_batch)  # Training batchsize, blackboard specified 32
-
-
+        train_batch = np.concatenate((train_batch_high, train_batch_low), 0)
 
         input = chainer.Variable(train_batch.astype('float32'))
         target = chainer.Variable(train_labels.astype('int32').ravel())
 
         model.cleargrads()
 
-
-        # print(predictions)
-
         predictions = model(input)
-        loss = softmax_cross_entropy.softmax_cross_entropy(predictions, target)  # For multi class predictions
 
-        loss.backward()
+        loss = softmax_cross_entropy.softmax_cross_entropy(predictions, target)
+
         acc = accuracy.accuracy(predictions, target)
 
+        loss_train.append(float(loss.data))
+        acc_train.append(float(acc.data))
+
+        loss.backward()
         optimizer.update()
 
-        sum_loss_train += float(loss.data) * len(
-            target.data)  # Times length of current batch for relative impact
-        sum_accuracy_train += float(acc.data)
-        overall_acc.append(float(acc.data))
-        overall_loss.append(float(loss.data))
-        print('Training mean loss =', (sum_loss_train / N), ',Training Accuracy =',
-              (sum_accuracy_train / (iteration-9)))  # To check values during process.
+        print('Training current loss =', (float(loss.data)), ',Training current Accuracy =',
+              (float(acc.data)))
 
-        # Testing the model
-    sum_accuracy = 0  # Creating a staring variable
-    sum_loss = 0
-    perm = np.random.permutation(N_test)  # permutation for the indices
-    input = chainer.Variable(test_batch.astype('float32'))
-    target = chainer.Variable(test_labels.astype('int32').ravel())
 
-    model.cleargrads()
+        #### for Validation the same dataset is used without updating the network ####
 
-    predictions = model(input)
 
-    loss = softmax_cross_entropy.softmax_cross_entropy(predictions, target)  # For multi class predictions
+        if iteration%25==0:
 
-    acc = accuracy.accuracy(predictions, target)
+            perm = np.random.permutation(N_test)  # permutation for the indices
+            input = chainer.Variable(test_batch.astype('float32'))
+            target = chainer.Variable(test_labels.astype('int32').ravel())
 
-    sum_loss += float(loss.data) * len(target.data)  # Times length of current batch for relative impact
-    sum_accuracy += float(acc.data) * len(target.data)
-    print('Validation mean loss =', (sum_loss / N_test), ', Validation Accuracy =',
-          (sum_accuracy / N_test))  # To check values during process.
+            model.cleargrads()
 
-    accplot_train[epoch] = sum_accuracy / N_test
-    lossplot_train[epoch] = sum_loss / N_test
+            predictions = model(input)
+
+            loss = softmax_cross_entropy.softmax_cross_entropy(predictions, target)  # For multi class predictions
+
+            acc = accuracy.accuracy(predictions, target)
+
+            loss_val.append(float(loss.data))
+            acc_val.append(float(acc.data))
+
+            print('Validation current loss =', (float(loss.data)), ', Validation current Accuracy =',
+                  (float(acc.data)))
+
     print('time elapsed: ' + str((time.time() - start_timer) / 60) + 'm')
     print('iterations per minute: ' + str((maxiter-10)/((time.time() - start_timer) / 60 / (epoch + 1))))
     print('time per epoch: ' + str((time.time() - start_timer) / 60 / (epoch + 1)) + 'm')
 
 with open('Accuracy_val.txt', 'w') as file_handler:
-    for item in accplot_train:
+    for item in acc_val:
         file_handler.write("{}\n".format(item))
 
 with open('Loss_val.txt', 'w') as file_handler:
-    for item in lossplot_train:
+    for item in loss_val:
         file_handler.write("{}\n".format(item))
 
 with open('Accuracy_train.txt', 'w') as file_handler:
-    for item in overall_acc:
+    for item in acc_train:
         file_handler.write("{}\n".format(item))
 
 with open('Loss_train.txt', 'w') as file_handler:
-    for item in overall_loss:
+    for item in loss_train:
         file_handler.write("{}\n".format(item))
 
 fig = plt.figure()
-plt.plot(accplot_train)
+plt.plot(acc_val)
 plt.title('Acc Val')
-plt.show()
+plt.savefig('acc_val.eps', format='eps', dpi=600)
 
 fig2 = plt.figure()
-plt.plot(lossplot_train)
+plt.plot(loss_val)
 plt.title('Loss Val')
-plt.show()
+plt.savefig('loo_val.eps', format='eps', dpi=600)
 
 fig3 = plt.figure()
-plt.plot(overall_acc)
+plt.plot(mediansmooth(acc_train,50))
 plt.title('Acc Train')
-plt.show()
+plt.savefig('acc_train.eps', format='eps', dpi=600)
 
 fig4 = plt.figure()
-plt.plot(overall_loss)
+plt.plot(mediansmooth(loss_train,50))
 plt.title('Loss Train')
+plt.savefig('loss_train.eps', format='eps', dpi=600)
 plt.show()
