@@ -14,12 +14,12 @@ import time
 # filename_titleshigh = 'titlesASCII_high.txt' # Top 25% cited titles
 # filename_titleslow = 'titlesASCII_low.txt' # Lower bound 25% cited titles
 
-#filename_titleshigh = 'titlesASCII_high_DictComp.txt' # Top 25% cited titles - better quality dictionary
-#filename_titleslow = 'titlesASCII_low_DictComp.txt' # Lower bound 25% cited titles - better quality dictionary
+filename_titleshigh = 'titlesASCII_high_DictComp.txt' # Top 25% cited titles - better quality dictionary
+filename_titleslow = 'titlesASCII_low_DictComp.txt' # Lower bound 25% cited titles - better quality dictionary
 
 ######## WORDS IMPORT ###########
-filename_titleshigh = 'titlesDict_high.txt' # Top 25% cited titles - better quality dictionary
-filename_titleslow = 'titlesDict_low.txt' # Lower bound 25% cited titles - better quality dictionary
+# filename_titleshigh = 'titlesDict_high.txt' # Top 25% cited titles - better quality dictionary
+# filename_titleslow = 'titlesDict_low.txt' # Lower bound 25% cited titles - better quality dictionary
 
 # Dictionary
 filename_dict = 'dictionary.txt'
@@ -76,7 +76,7 @@ def showrand_ASCII(rand_titles, n=5):
         print(ascii2title(rand_titles[u]))
 
 def dict2title(title):
-    """Traslates dictionary code to titles. """
+    """Translates dictionary code to titles. """
     L = title
     y = ''.join(dictionary[int(i)] + " " for i in L if i > 0)
     y=y.replace('"', "")
@@ -89,44 +89,10 @@ def showrand_dict(rand_titles, n=5):
         print(dict2title(rand_titles[u]))
 
 class MLP(chainer.Chain):
-    """MLP from exercise 1 for testing"""
-
-    def __init__(self, n_units, n_out):
-        super(MLP, self).__init__(
-            # No need for input number, it can infer this.
-            l1 = L.Linear(None, n_units), # Input to layer 1
-            l2 = L.Linear(None, n_out), # Layer out
-        )
-
-    def __call__(self, x):
-        h1 = F.relu(self.l1(x))
-        y = self.l2(h1)
-        return y
-
-class Discriminator(chainer.Chain):
-    """Multilayered Perceptron with 1 hidden layer. It takes n_units as input
-        , which is the number of hidden layer units. In addition, it takes n_out as input, specifying output unit of
-        last layer"""
-
-    def __init__(self, n_units, n_out):
-        super(Discriminator, self).__init__(
-            # No need for input number, it can infer this.
-            l1 = L.Linear(None, n_units), # Layer 1
-            l2 = L.Linear(n_units, n_units), # Layer 2
-            l3 = L.Linear(n_units, n_out), # Layer 3; out
-        )
-
-    def __call__(self, x):
-        h1 = F.elu(self.l1(x))
-        h2 = F.elu(self.l2(h1))
-        y = F.sigmoid(self.l3(h2))
-        return y
-
-class MLP2(chainer.Chain):
-    """MLP from exercise 1 for testing"""
+    """MLP for binary classification"""
 
     def __init__(self, n_out):
-        super(MLP2, self).__init__(
+        super(MLP, self).__init__(
             # No need for input number, it can infer this.
             l1 = L.Linear(None, 194), # Input to layer 1
             l2 = L.Linear(None, 1000), # Layer out
@@ -134,13 +100,13 @@ class MLP2(chainer.Chain):
             l4 = L.Linear(None, 500),
             l5 = L.Linear(None, 500),
             l6 = L.Linear(None, 250),
-            l7 = L.Linear(None, 250),  # Layer out
+            l7 = L.Linear(None, 250),
             l8 = L.Linear(None, 200),
             l9 = L.Linear(None, 150),
             l10 = L.Linear(None, 100),
             l11 = L.Linear(None, 50),
             l12 = L.Linear(None, 25),
-            l13 = L.Linear(None,n_out),
+            l13 = L.Linear(None,n_out), # Layer out
         )
 
     def __call__(self, x):
@@ -162,7 +128,7 @@ class MLP2(chainer.Chain):
 # Pre define dataset
 titles_high, targets_high = get_title_target(filename_titleshigh, 1)
 titles_low, targets_low = get_title_target(filename_titleslow, 0)
-# targets_low -= 1
+
 
 titles = titles_low + titles_high
 targets = np.concatenate((targets_low, targets_high))
@@ -181,24 +147,19 @@ titles_train = rand_titles[N_split:]; targets_train = rand_targets[N_split:]  # 
 
 ###################MLP Part######################
 
-batchsize = 1000
-N_train = batchsize*100 #batchsize*5000 # Can max max len(titles_train)
-# N_train < len(titles_train)
+batchsize = 30
+N_train = batchsize*5000 # Can max max len(titles_train)
 
-epochs = 200
-unit = 50 # Hidden units in layers
+epochs = 101
 n_out = 2 # The number of classes out. If 2 then it's similar to how it was done for MNIST. If 1, then it's a popularity probabiliy.
 
 # Network selection
-# model = MLP(unit, n_out)
-# model = Discriminator(unit, n_out)
-model = MLP2(n_out)
+model = MLP(n_out)
 
 # optimizer = optimizers.SGD()  # Using Stochastic Gradient Descent
 # optimizer = optimizers.MomentumSGD(lr=0.001,momentum=0.9)
 # optimizer = optimizers.NesterovAG(lr=0.0001,momentum=0.9)
 optimizer = optimizers.AdaGrad(lr=0.001)
-# optimizer = optimizers.AdaDelta()
 optimizer.setup(model)
 
 
@@ -209,6 +170,8 @@ total_acc = np.zeros(epochs)
 loss_batches = np.zeros(epochs*N_train/batchsize); bcount=0
 acc_batches = np.zeros(epochs*N_train/batchsize)
 
+test_loss = np.zeros(epochs)
+test_acc = np.zeros(epochs)
 
 # MLP start
 time_start = time.time()
@@ -225,41 +188,52 @@ for epoch in range(epochs):
         target = targets_train[i: i+batchsize]
 
         model.cleargrads()
-
         predictions = model(input)
-        # print(predictions)
 
         if n_out == 1:
             loss = F.sigmoid_cross_entropy(predictions, np.atleast_2d(target).T) #Sigmoid for two class prediction (i.e.  one number output)
         if n_out > 1:
             loss = softmax_cross_entropy.softmax_cross_entropy(predictions,target) # For multi class predictions
 
-
-
         loss_batches[bcount] = loss.data
         total_loss[epoch] += loss.data
-
         loss.backward()
-        # fakeloss = 1-accuracy.accuracy(predictions, target)
-        # fakeloss.backward()
-
         acc = accuracy.accuracy(predictions, target)
         acc_batches[bcount]= acc.data; bcount+=1
         total_acc[epoch] += acc.data
 
         optimizer.update()
-    print("Epoch: ", str(epoch+1), "| Accuracy: ", str(total_acc[epoch] / (N_train/batchsize)) + "%", "| Time elapsed: ", str((time.time()-time_start)/60)+ " minutes | actual loss: ",str(total_loss[epoch]))
+    print("Epoch: ", str(epoch+1), "| Training accuracy: ", str(total_acc[epoch] / (N_train/batchsize)) + "%", "| Time elapsed: ", str((time.time()-time_start)/60)+ " minutes | actual loss: ",str(total_loss[epoch]))
+
+
+    ###### Testing: Doesn't really need a loop as model doesn't update here anyway. It is order independent.
+    model.cleargrads()
+    predictions = model(chainer.Variable(np.asarray(titles_test)))
+
+    acc = accuracy.accuracy(predictions, targets_test)
+    if n_out == 1:
+        loss = F.sigmoid_cross_entropy(predictions, np.atleast_2d(
+            targets_test).T)  # Sigmoid for two class prediction (i.e.  one number output)
+    if n_out > 1:
+        loss = softmax_cross_entropy.softmax_cross_entropy(predictions, targets_test)  # For multi class predictions
+
+    test_loss[epoch] = loss.data
+    test_acc[epoch] = acc.data
+    print("Epoch: ", str(epoch+1), "| Testing accuracy: ", str(test_acc[epoch]) + "%", "| Time elapsed: ", str((time.time()-time_start)/60)+ " minutes | actual loss: ",str(test_loss[epoch]))
+
+
 
 
 ##### Plot desciptive statistics #########
-plt.plot(loss_batches); plt.title('loss per batch');
-plt.figure();
-plt.plot(acc_batches); plt.title('accuracy per batch');
-plt.figure();
-plt.plot(total_loss);plt.xticks(range(epochs));plt.title('total loss per epoch');
-plt.figure();
-plt.plot(total_acc / (N_train/batchsize));plt.xticks(range(epochs)); plt.title('accuracy per epoch');
+fig, ax1 = plt.subplots()
+plt.plot(total_acc/(N_train/batchsize),color=[0.8,0.2,0.2], label="Train")
+plt.plot(test_acc, color=[0.2,0.4,0.8], label="Test")
+plt.ylabel("Accuracy")
+plt.xlabel("Epoch")
+plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.)
+# fig.tight_layout()
+plt.show()
 
-# plt.plot(total_acc[0:epoch] / (N_train/batchsize))
 
-
+plt.savefig("RESULTS_ASCII_Accuracy.eps", format='eps', dpi=1000)
