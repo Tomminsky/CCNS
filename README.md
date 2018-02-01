@@ -1,18 +1,26 @@
 # CCNS
 
-## preprocessdata.sh
-merges parts of data (that otherwise would be to big to be transferred via email) and removes white space
+## structure
 
-result: allcrawspreproc.txt
+### Final_networks
+contains scripts for the network architectures used
 
-## preprocessdata.m
-takes allcrawspreproc.txt and performs the respective analysis
+### Results_Figures
+contain results figures in eps format and a function to create word embedding result plots
 
-- ASCII conversion + saving
-- Dictionary conversion + saving
-- ASCII re-conversion based on titles used to build up the dictionary version + saving
+### RaspberryPi
+contains all scripts that were running the Raspberry Pi
 
-result: all kinds of .mat and .txt files (contained by titlesASCII_all.zip and titlesASCII_split_and_citations.zip)
+### Preprocessing
+contains all scripts used for preprocessing
+
+### Data
+contains the raw and some preocessed data
+
+### External
+contains external functions under the copyright below
+
+-------
 
 ### copyright:
 -------
