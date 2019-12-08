@@ -4,7 +4,7 @@ This code implements skip-gram model and continuous-bow model.
 import argparse
 import collections
 
-from prepare_embedding import get_dictionary,get_title
+from Preprocessing.prepare_embedding import get_dictionary,get_title
 
 import numpy as np
 import six

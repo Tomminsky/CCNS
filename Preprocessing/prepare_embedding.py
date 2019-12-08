@@ -20,7 +20,7 @@ def get_title(namefile,dictionary):
         for line in file:
             lines = lines + line.replace(',0', '').replace('\n', '').replace('"','') + ',' + str(dictionary.get('<eol>')) + ','
 
-    titles=np.array(map(int,lines[:-1].split(',')))
+    titles=np.array(list(map(int,lines[:-1].split(','))))
 
     eolidx = [i for i, x in enumerate([titles[y] == dictionary.get('<eol>') for y in range(len(titles))]) if x]
 
